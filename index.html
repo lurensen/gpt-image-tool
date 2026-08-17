@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>gpt-image 生图工具</title>
+<style>
+:root{
+  --bg:#0b0d10;--glow:rgba(79,140,255,.10);--card:#15181e;--card2:#0e1116;
+  --border:#262c36;--text:#e8eaf0;--muted:#9aa3b5;--accent:#4f8cff;
+  --accent-soft:#14202f;--bar-bg:rgba(11,13,16,.82);--shadow:none;--danger:#e5484d;
+}
+:root[data-theme="light"]{
+  --bg:#f4f6f9;--glow:rgba(47,111,237,.08);--card:#ffffff;--card2:#f1f3f7;
+  --border:#e2e6ec;--text:#171b22;--muted:#6a7383;--accent:#2f6fed;
+  --accent-soft:#e8effd;--bar-bg:rgba(255,255,255,.86);
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(900px 480px at 85% -10%,var(--glow),transparent),radial-gradient(700px 400px at -10% 100%,var(--glow),transparent),var(--bg);color:var(--text);min-height:100vh;padding-bottom:calc(88px + env(safe-area-inset-bottom));transition:background .3s,color .3s}
+.topbar{position:sticky;top:0;z-index:70;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bar-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+.logo{font-size:17px;font-weight:700;letter-spacing:.3px}
+.topbar-actions{display:flex;gap:8px}
+.iconbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:17px;cursor:pointer;touch-action:manipulation}
+.layout{max-width:1200px;margin:0 auto;padding:14px 14px 0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
+input,select,textarea{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:16px;outline:none;transition:border-color .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{min-height:96px;resize:vertical}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>div{flex:1 1 140px}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px 20px;font-size:16px;font-weight:600;cursor:pointer;width:100%;touch-action:manipulation;transition:opacity .2s}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.small{width:auto;padding:10px 16px;font-size:14px}
+.tabs{display:flex;gap:8px;margin-bottom:4px}
+.tab{flex:1;text-align:center;padding:12px 6px;border-radius:10px;border:1px solid var(--border);cursor:pointer;color:var(--muted);font-size:14px;user-select:none;touch-action:manipulation;background:transparent}
+.tab.active{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}
+.chips{display:flex;gap:10px;flex-wrap:wrap}
+.chips.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.chip{text-align:center;padding:13px 6px;border:1px solid var(--border);border-radius:12px;color:var(--muted);cursor:pointer;font-size:15px;user-select:none;touch-action:manipulation;flex:1}
+.chip.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.chip.wide{grid-column:1/-1;flex:none}
+.autotext{color:var(--muted);font-size:14px;text-align:center;padding:18px 0;line-height:1.9}
+.note{margin-top:12px;padding:12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--muted);font-size:13px;line-height:1.8}
+.willuse{margin-top:14px;font-size:14px;color:var(--muted)}
+.willuse b{color:var(--accent);font-size:17px}
+.realsize{margin-top:8px;font-size:13px;color:var(--muted)}
+.realsize b{color:var(--accent)}
+.drop{border:2px dashed var(--border);border-radius:12px;padding:26px;text-align:center;color:var(--muted);cursor:pointer;font-size:14px}
+.drop:hover,.drop.over{border-color:var(--accent);color:var(--text)}
+.thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.thumb{position:relative;width:88px;height:88px}
+.thumb img{width:100%;height:100%;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+.thumb .del{position:absolute;top:-7px;right:-7px;width:22px;height:22px;line-height:20px;text-align:center;background:var(--danger);color:#fff;border-radius:50%;font-size:14px;cursor:pointer;border:none}
+#goBar{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--bar-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--border)}
+#status{display:none;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card2);font-size:14px}
+#status.on{display:flex}
+.spinner{width:18px;height:18px;border:3px solid rgba(128,128,128,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result img{max-width:100%;border-radius:12px;display:block;cursor:pointer;touch-action:manipulation}
+.err{color:var(--danger);font-size:14px;margin-top:10px;white-space:pre-wrap}
+#fatal{display:none;max-width:1200px;margin:10px auto 0;background:#3d1518;border:1px solid var(--danger);color:#ffb4b6;padding:12px;border-radius:12px;font-size:14px;white-space:pre-wrap}
+.actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.history{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.hitem{position:relative;width:76px;height:76px}
+.hitem img{width:100%;height:100%;object-fit:cover;border-radius:10px;cursor:pointer;border:1px solid var(--border);touch-action:manipulation}
+.hbtn{position:absolute;right:3px;bottom:3px;width:26px;height:26px;padding:0;margin:0;border:none;border-radius:8px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:13px;line-height:26px}
+.hbtn:hover{background:var(--accent)}
+.hidden{display:none}
+.tip{font-size:12px;color:var(--muted);margin-top:10px}
+.export{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)}
+.empty{text-align:center;padding:56px 20px;color:var(--muted);border-style:dashed}
+.empty-icon{font-size:44px;margin-bottom:14px}
+.empty .tip{margin-top:8px}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+#viewerImg{max-width:100%;max-height:72vh;object-fit:contain;border-radius:10px}
+.viewer-bar{display:flex;gap:12px;margin-top:18px}
+.viewer-bar button{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:15px;cursor:pointer;touch-action:manipulation}
+#viewerClose{background:#3a3f4a}
+.viewer-tip{color:#9aa3b5;font-size:13px;margin-top:12px;text-align:center}
+#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:.3s;z-index:1001;max-width:86%;text-align:center;box-shadow:var(--shadow)}
+#toast.on{opacity:1}
+@media (min-width:960px){
+  body{padding-bottom:32px}
+  .layout{display:grid;grid-template-columns:minmax(380px,460px) minmax(0,1fr);gap:18px;align-items:start;padding-top:20px}
+  #goBar{position:static;padding:0;background:none;border:none;backdrop-filter:none;-webkit-backdrop-filter:none;margin-top:14px}
+  .logo{font-size:19px}
+  .empty{padding:110px 20px}
+}
+</style>
+</head>
+<body>
+<div id="fatal"></div>
+
+<header class="topbar">
+  <div class="logo">🎨 gpt-image 生图</div>
+  <div class="topbar-actions">
+    <button class="iconbtn" id="themeBtn" title="切换深浅模式">☀️</button>
+    <button class="iconbtn" id="cfgToggle" title="接口设置">⚙️</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="col-left">
+    <div class="card" id="cfg" style="display:none">
+      <label>API 地址（中转站地址 + /v1）</label>
+      <input id="baseUrl" placeholder="https://your-relay.com/v1">
+      <div class="row">
+        <div><label>API Key</label><input id="apiKey" type="password" placeholder="sk-..."></div>
+        <div><label>模型</label><input id="model" value="gpt-image-2"></div>
+      </div>
+      </div>
+
+    <div class="card">
+      <label>质量</label>
+      <select id="quality">
+        <option value="auto">自动</option><option value="low">低</option>
+        <option value="medium">中</option><option value="high">高</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" id="tab-gen">✍️ 文生图</div>
+        <div class="tab" id="tab-edit">🖼️ 图生图 / 多图参考</div>
+      </div>
+      <div id="edit-panel" style="display:none">
+        <label>参考图（可传多张，手机可拍照/选相册，电脑支持拖拽、粘贴）</label>
+        <div class="drop" id="drop">点击选择图片</div>
+        <input type="file" id="file" accept="image/*" multiple class="hidden">
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs" id="sizeTabs">
+        <div class="tab active" data-s="auto">自动</div>
+        <div class="tab" data-s="ratio">按比例</div>
+        <div class="tab" data-s="custom">自定义宽高</div>
+      </div>
+      <div id="panel-auto">
+        <div class="autotext">自动尺寸<br>不向模型传递具体的分辨率参数<br>由模型自己决定生成尺寸</div>
+      </div>
+      <div id="panel-ratio" style="display:none">
+        <label>基准分辨率</label>
+        <div class="chips" id="resChips">
+          <div class="chip" data-res="1024">1K</div>
+          <div class="chip" data-res="2048">2K</div>
+          <div class="chip active" data-res="3840">4K</div>
+        </div>
+        <label>图像比例</label>
+        <div class="chips grid" id="ratioChips">
+          <div class="chip" data-r="1:1">1:1</div>
+          <div class="chip" data-r="3:2">3:2</div>
+          <div class="chip" data-r="2:3">2:3</div>
+          <div class="chip active" data-r="16:9">16:9</div>
+          <div class="chip" data-r="9:16">9:16</div>
+          <div class="chip" data-r="4:3">4:3</div>
+          <div class="chip" data-r="3:4">3:4</div>
+          <div class="chip" data-r="21:9">21:9</div>
+          <div class="chip wide" data-r="custom">自定义比例</div>
+        </div>
+        <div class="row" id="customRatio" style="display:none">
+          <div><label>比例宽</label><input id="ratioW" type="number" value="5" min="1"></div>
+          <div><label>比例高</label><input id="ratioH" type="number" value="4" min="1"></div>
+        </div>
+      </div>
+      <div id="panel-custom" style="display:none">
+        <label>输入具体像素值</label>
+        <div class="row">
+          <div><label>宽度 (Width)</label><input id="cw" type="number" value="1024"></div>
+          <div><label>高度 (Height)</label><input id="ch" type="number" value="1024"></div>
+        </div>
+        <div class="note">ⓘ 由于模型限制，最终输出会自动规整到合法尺寸：宽高均为 16 的倍数，最大边长 3840px，宽高比不超过 3:1，总像素限制为 655360–8294400。</div>
+      </div>
+      <div class="willuse" id="willuse"></div>
+    </div>
+
+    <div class="card">
+      <label>提示词（电脑端 Ctrl+Enter 快速生成）</label>
+      <textarea id="prompt" placeholder="文生图：描述你想要的画面&#10;图生图：说明如何使用参考图，例如：把第一张图的人物放进第二张图的场景"></textarea>
+      <div class="err" id="err"></div>
+      <div id="goBar">
+        <div id="status"><span class="spinner"></span><span id="statusText"></span></div>
+        <button class="btn" id="go">🚀 生成图片</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="col-right">
+    <div class="card empty" id="emptyState">
+      <div class="empty-icon">🖼️</div>
+      <div>生成的图片会显示在这里</div>
+      <div class="tip">支持文生图、多图参考图生图，手机电脑通用</div>
+    </div>
+    <div class="card result" id="resultBox" style="display:none">
+      <img id="resultImg" alt="生成结果">
+      <div class="realsize" id="realSize"></div>
+      <div class="tip">👆 点击图片全屏查看，手机上长按图片可保存</div>
+      <div class="actions">
+        <button class="btn small" id="dlBtn">⬇️ 保存图片</button>
+        <button class="btn small" id="viewBtn">🔍 查看大图</button>
+      </div>
+      <div class="export">
+        <label>📐 导出为指定尺寸（本地转换，不耗 API 额度）</label>
+        <div class="row">
+          <div><label>宽</label><input id="expW" type="number" value="1024"></div>
+          <div><label>高</label><input id="expH" type="number" value="1024"></div>
+          <div>
+            <label>方式</label>
+            <select id="expMode">
+              <option value="crop">居中裁剪</option>
+              <option value="stretch">拉伸填充</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn small" id="expBtn" style="margin-top:12px">导出此尺寸 PNG</button>
+      </div>
+      <div class="tip">历史记录（点击查看大图）：</div>
+      <div class="history" id="history"></div>
+    </div>
+  </section>
+</main>
+
+<div id="viewer">
+  <img id="viewerImg" alt="大图">
+  <div class="viewer-bar">
+    <button id="viewerSave">⬇️ 保存图片</button>
+    <button id="viewerClose">✕ 关闭</button>
+  </div>
+  <div class="viewer-tip">也可以直接长按图片，选择「保存到相册 / 存储图像」</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+function fatal(msg){
+  const el = $('fatal');
+  el.textContent = '⚠️ 页面内部错误：' + msg;
+  el.style.display = 'block';
+}
+window.addEventListener('error', e => fatal(e.message + '（第 ' + e.lineno + ' 行）'));
+window.addEventListener('unhandledrejection', e => fatal(String(e.reason)));
+
+let toastTimer;
+function toast(msg){
+  $('toast').textContent = msg;
+  $('toast').classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> $('toast').classList.remove('on'), 3500);
+}
+
+/* ================= 主题 ================= */
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  $('themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = t === 'dark' ? '#0b0d10' : '#f4f6f9';
+  store.set('gptimg_theme', t);
+}
+$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+applyTheme(store.get('gptimg_theme') || ((window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark'));
+
+/* ================= 尺寸选择器 ================= */
+let sizeMode = 'auto';
+let baseRes = 3840;
+let ratioKey = '16:9';
+
+function parseRatio(){
+  if (ratioKey !== 'custom'){
+    const p = ratioKey.split(':');
+    return [parseFloat(p[0]) || 1, parseFloat(p[1]) || 1];
+  }
+  return [parseFloat($('ratioW').value) || 1, parseFloat($('ratioH').value) || 1];
+}
+function normalizeSize(w, h){
+  w = Math.max(w, 1); h = Math.max(h, 1);
+  if (w / h > 3) w = h * 3;
+  if (h / w > 3) h = w * 3;
+  const sMax = 3840 / Math.max(w, h);
+  if (sMax < 1){ w *= sMax; h *= sMax; }
+  const maxPx = 8294400, minPx = 655360;
+  const px = w * h;
+  if (px > maxPx){ const s = Math.sqrt(maxPx / px); w *= s; h *= s; }
+  if (px < minPx){ const s = Math.sqrt(minPx / px); w *= s; h *= s; }
+  w = Math.round(w / 16) * 16;
+  h = Math.round(h / 16) * 16;
+  w = Math.min(Math.max(w, 16), 3840);
+  h = Math.min(Math.max(h, 16), 3840);
+  while (w * h < minPx && (w < 3840 || h < 3840)){ if (w <= h) w = Math.min(w + 16, 3840); else h = Math.min(h + 16, 3840); }
+  while (w * h > maxPx && (w > 16 || h > 16)){ if (w >= h) w = Math.max(w - 16, 16); else h = Math.max(h - 16, 16); }
+  return [w, h];
+}
+function computeSize(){
+  if (sizeMode === 'auto') return null;
+  if (sizeMode === 'ratio'){
+    const [rw, rh] = parseRatio();
+    let w, h;
+    if (rw >= rh){ w = baseRes; h = baseRes * rh / rw; }
+    else { h = baseRes; w = baseRes * rw / rh; }
+    return normalizeSize(w, h);
+  }
+  return normalizeSize(parseInt($('cw').value) || 1024, parseInt($('ch').value) || 1024);
+}
+function refreshWillUse(){
+  const s = computeSize();
+  $('willuse').innerHTML = s
+    ? '将使用 <b>' + s[0] + 'x' + s[1] + '</b>（约 ' + (s[0] * s[1] / 1e6).toFixed(1) + ' MP）'
+    : '将使用 <b>自动</b>（由模型自己决定生成尺寸）';
+}
+document.querySelectorAll('#sizeTabs .tab').forEach(t => {
+  t.onclick = () => {
+    sizeMode = t.dataset.s;
+    document.querySelectorAll('#sizeTabs .tab').forEach(x => x.classList.toggle('active', x === t));
+    $('panel-auto').style.display = sizeMode === 'auto' ? '' : 'none';
+    $('panel-ratio').style.display = sizeMode === 'ratio' ? '' : 'none';
+    $('panel-custom').style.display = sizeMode === 'custom' ? '' : 'none';
+    refreshWillUse();
+  };
+});
+document.querySelectorAll('#resChips .chip').forEach(c => {
+  c.onclick = () => {
+    baseRes = parseInt(c.dataset.res);
+    document.querySelectorAll('#resChips .chip').forEach(x => x.classList.toggle('active', x === c));
+    refreshWillUse();
+  };
+});
+document.querySelectorAll('#ratioChips .chip').forEach(c => {
+  c.onclick = () => {
+    ratioKey = c.dataset.r;
+    document.querySelectorAll('#ratioChips .chip').forEach(x => x.classList.toggle('active', x === c));
+    $('customRatio').style.display = ratioKey === 'custom' ? '' : 'none';
+    refreshWillUse();
+  };
+});
+['ratioW','ratioH','cw','ch'].forEach(id => $(id).addEventListener('input', refreshWillUse));
+refreshWillUse();
+
+/* ================= 其余逻辑 ================= */
+let mode = 'gen';
+let refImages = [];
+const history = [];
+let currentSrc = '';
+let lastRequested = null;
+
+try{
+  const saved = JSON.parse(store.get('gptimg_cfg') || '{}');
+  if (saved.baseUrl) $('baseUrl').value = saved.baseUrl;
+  if (saved.apiKey) $('apiKey').value = saved.apiKey;
+  if (saved.model) $('model').value = saved.model;
+}catch(e){}
+
+$('cfgToggle').onclick = () => {
+  const c = $('cfg');
+  c.style.display = c.style.display === 'none' ? '' : 'none';
+};
+
+function switchMode(m){
+  mode = m;
+  $('tab-gen').classList.toggle('active', m === 'gen');
+  $('tab-edit').classList.toggle('active', m === 'edit');
+  $('edit-panel').style.display = m === 'edit' ? '' : 'none';
+}
+$('tab-gen').onclick = () => switchMode('gen');
+$('tab-edit').onclick = () => switchMode('edit');
+
+function addFiles(fileList){
+  for (const f of fileList){
+    if (!f.type || !f.type.startsWith('image/')) continue;
+    refImages.push({file:f, url:URL.createObjectURL(f)});
+  }
+  renderThumbs();
+}
+function renderThumbs(){
+  const box = $('thumbs');
+  box.innerHTML = '';
+  refImages.forEach((r,i)=>{
+    const d = document.createElement('div');
+    d.className = 'thumb';
+    const img = document.createElement('img');
+    img.src = r.url;
+    img.onclick = () => openViewer(r.url);
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '×';
+    del.onclick = e => { e.stopPropagation(); URL.revokeObjectURL(r.url); refImages.splice(i,1); renderThumbs(); };
+    d.appendChild(img); d.appendChild(del);
+    box.appendChild(d);
+  });
+}
+$('drop').onclick = () => $('file').click();
+$('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+['dragover','dragenter'].forEach(ev => $('drop').addEventListener(ev, e => {e.preventDefault(); $('drop').classList.add('over');}));
+['dragleave','drop'].forEach(ev => $('drop').addEventListener(ev, e => {e.preventDefault(); $('drop').classList.remove('over');}));
+$('drop').addEventListener('drop', e => addFiles(e.dataTransfer.files));
+document.addEventListener('paste', e => {
+  if (mode === 'edit' && e.clipboardData && e.clipboardData.files.length) addFiles(e.clipboardData.files);
+});
+
+let timer = null, secs = 0, statusText = '';
+function startStatus(text){
+  statusText = text; secs = 0;
+  $('status').classList.add('on');
+  renderStatus();
+  timer = setInterval(()=>{ secs++; renderStatus(); }, 1000);
+}
+function renderStatus(){
+  $('statusText').textContent = statusText + '…（已等待 ' + secs + ' 秒，生图通常要 10~60 秒）';
+}
+function stopStatus(){
+  if (timer){ clearInterval(timer); timer = null; }
+  $('status').classList.remove('on');
+}
+
+let viewerSrc = '';
+function openViewer(src){
+  if (!src) return;
+  viewerSrc = src;
+  $('viewerImg').src = src;
+  $('viewer').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeViewer(){
+  $('viewer').style.display = 'none';
+  document.body.style.overflow = '';
+}
+$('viewerClose').onclick = closeViewer;
+$('viewer').onclick = e => { if (e.target === $('viewer')) closeViewer(); };
+$('viewerSave').onclick = async () => {
+  const ok = await saveImage(viewerSrc);
+  if (!ok) toast('请长按上方图片，选择「保存到相册」');
+};
+$('resultImg').onclick = () => openViewer(currentSrc);
+$('resultImg').onload = () => {
+  const w = $('resultImg').naturalWidth, h = $('resultImg').naturalHeight;
+  if (w){
+    $('expW').value = w; $('expH').value = h;
+    let t = '📏 实际输出：<b>' + w + 'x' + h + '</b>（' + (w * h / 1e6).toFixed(2) + ' MP）';
+    if (lastRequested) t += '｜请求：' + lastRequested;
+    $('realSize').innerHTML = t;
+  }
+};
+$('viewBtn').onclick = () => openViewer(currentSrc);
+
+async function deliverBlob(blob, name){
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    return true;
+  }catch(e){ return false; }
+}
+function dataURLtoBlob(dataURL){
+  const parts = dataURL.split(',');
+  const mime = (parts[0].match(/:(.*?);/) || [,'image/png'])[1];
+  const bstr = atob(parts[1]);
+  let n = bstr.length;
+  const u8 = new Uint8Array(n);
+  while(n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], {type: mime});
+}
+async function saveImage(src){
+  if (!src) return false;
+  try{
+    const blob = src.startsWith('data:') ? dataURLtoBlob(src) : await (await fetch(src)).blob();
+    return await deliverBlob(blob, 'gpt-image-' + Date.now() + '.png');
+  }catch(e){ return false; }
+}
+async function saveOrView(src){
+  const ok = await saveImage(src);
+  if (!ok){ openViewer(src); toast('无法直接下载，请长按大图保存到相册'); }
+}
+$('dlBtn').onclick = () => saveOrView(currentSrc);
+
+$('expBtn').onclick = () => {
+  const w = parseInt($('expW').value), h = parseInt($('expH').value);
+  if (!w || !h || w < 16 || h < 16){ toast('请输入有效的宽高（不小于 16）'); return; }
+  if (!currentSrc){ toast('请先生成图片'); return; }
+  toast('正在转换…');
+  const img = new Image();
+  if (!currentSrc.startsWith('data:')) img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try{
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d');
+      if ($('expMode').value === 'crop'){
+        const scale = Math.max(w / img.width, h / img.height);
+        const sw = w / scale, sh = h / scale;
+        ctx.drawImage(img, (img.width - sw)/2, (img.height - sh)/2, sw, sh, 0, 0, w, h);
+      } else {
+        ctx.drawImage(img, 0, 0, w, h);
+      }
+      cv.toBlob(async blob => {
+        if (!blob){ toast('导出失败'); return; }
+        const ok = await deliverBlob(blob, 'gpt-image-' + w + 'x' + h + '.png');
+        if (ok) toast('已导出 ' + w + 'x' + h + ' PNG');
+        else { openViewer(cv.toDataURL('image/png')); toast('请长按大图保存'); }
+      }, 'image/png');
+    }catch(e){
+      toast('导出失败：可能受跨域限制，请先「保存图片」再裁剪');
+    }
+  };
+  img.onerror = () => toast('图片加载失败，无法导出');
+  img.src = currentSrc;
+};
+
+function renderHistory(){
+  const box = $('history');
+  box.innerHTML = '';
+  history.slice(0, 12).forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'hitem';
+    const img = document.createElement('img');
+    img.src = s;
+    img.onclick = () => {
+      currentSrc = s;
+      lastRequested = null;
+      $('resultImg').src = s;
+      $('emptyState').style.display = 'none';
+      $('resultBox').style.display = '';
+      openViewer(s);
+    };
+    const b = document.createElement('button');
+    b.className = 'hbtn';
+    b.textContent = '⬇';
+    b.onclick = ev => { ev.stopPropagation(); saveOrView(s); };
+    d.appendChild(img); d.appendChild(b);
+    box.appendChild(d);
+  });
+}
+
+async function readJson(res){
+  let data;
+  try{ data = await res.json(); }
+  catch(e){
+    const t = await res.text().catch(()=> '');
+    throw new Error('HTTP ' + res.status + '，响应不是 JSON（中转站或上游可能报错）：\n' + t.slice(0, 300));
+  }
+  if (!res.ok || data.error){
+    const m = (data.error && (data.error.message || data.error.msg || JSON.stringify(data.error))) || JSON.stringify(data);
+    throw new Error(m);
+  }
+  if (!data.data || !data.data[0]) throw new Error('响应中没有图片数据：' + JSON.stringify(data).slice(0, 300));
+  return data;
+}
+
+function postEdit(fieldName, baseUrl, apiKey, model, prompt, sizeVal){
+  const fd = new FormData();
+  fd.append('model', model);
+  fd.append('prompt', prompt);
+  if (sizeVal) fd.append('size', sizeVal);
+  fd.append('quality', $('quality').value);
+  fd.append('n', '1');
+  refImages.forEach(r => fd.append(fieldName, r.file, r.file.name || 'ref.png'));
+  return fetch(baseUrl + '/images/edits', {
+    method: 'POST',
+    headers: {'Authorization': 'Bearer ' + apiKey},
+    body: fd
+  });
+}
+
+async function gen(){
+  const prompt = $('prompt').value.trim();
+  if (!prompt){ showErr('请输入提示词'); return; }
+  const baseUrl = $('baseUrl').value.trim().replace(/\/+$/, '');
+  const apiKey = $('apiKey').value.trim();
+  if (!baseUrl || !apiKey){ showErr('请先在设置里填写 API 地址和 Key'); return; }
+  if (mode === 'edit' && refImages.length === 0){ showErr('图生图模式请至少上传 1 张参考图'); return; }
+  store.set('gptimg_cfg', JSON.stringify({baseUrl, apiKey, model: $('model').value}));
+
+  const s = computeSize();
+  const sizeVal = s ? (s[0] + 'x' + s[1]) : null;
+  const sizeLabel = sizeVal || '自动';
+  lastRequested = sizeVal;
+
+  const btn = $('go');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中…';
+  showErr('');
+  startStatus((mode === 'gen' ? '✍️ 文生图' : '🖼️ 图生图') + '（' + sizeLabel + '），正在生成');
+
+  try{
+    const model = $('model').value.trim() || 'gpt-image-2';
+    let data;
+
+    if (mode === 'gen'){
+      const body = {model, prompt, n:1, quality:$('quality').value};
+      if (sizeVal) body.size = sizeVal;
+      const res = await fetch(baseUrl + '/images/generations', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey},
+        body: JSON.stringify(body)
+      });
+      data = await readJson(res);
+    } else {
+      let res = await postEdit('image', baseUrl, apiKey, model, prompt, sizeVal);
+      let firstErr = null;
+      try{ data = await readJson(res); }catch(e){ firstErr = e; data = null; }
+      if (!data){
+        if (/image/i.test(String(firstErr.message))){
+          res = await postEdit('image[]', baseUrl, apiKey, model, prompt, sizeVal);
+          data = await readJson(res);
+        } else {
+          throw firstErr;
+        }
+      }
+    }
+
+    const item = data.data[0];
+    const src = item.url || ('data:image/png;base64,' + item.b64_json);
+    currentSrc = src;
+    $('resultImg').src = src;
+    $('emptyState').style.display = 'none';
+    $('resultBox').style.display = '';
+    history.unshift(src);
+    renderHistory();
+    setTimeout(()=> $('resultBox').scrollIntoView({behavior:'smooth', block:'start'}), 60);
+  }catch(e){
+    showErr('生成失败：' + e.message);
+  }finally{
+    stopStatus();
+    btn.disabled = false;
+    btn.textContent = '🚀 生成图片';
+  }
+}
+$('go').onclick = gen;
+
+$('prompt').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') gen();
+});
+
+function showErr(msg){ $('err').textContent = msg || ''; }
+})();
+</script>
+</body>
+</html>
