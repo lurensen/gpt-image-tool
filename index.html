@@ -107,7 +107,7 @@ textarea{min-height:96px;resize:vertical}
 <main class="layout">
   <section class="col-left">
     <div class="card" id="cfg" style="display:none">
-      <label>API 地址（中转站地址 + /v1）</label>
+      <label>API 地址（地址 + /v1）</label>
       <input id="baseUrl" placeholder="https://your-relay.com/v1">
       <div class="row">
         <div><label>API Key</label><input id="apiKey" type="password" placeholder="sk-..."></div>
@@ -549,7 +549,7 @@ async function readJson(res){
   try{ data = await res.json(); }
   catch(e){
     const t = await res.text().catch(()=> '');
-    throw new Error('HTTP ' + res.status + '，响应不是 JSON（中转站或上游可能报错）：\n' + t.slice(0, 300));
+    throw new Error('HTTP ' + res.status + '，响应不是 JSON（上游可能报错）：\n' + t.slice(0, 300));
   }
   if (!res.ok || data.error){
     const m = (data.error && (data.error.message || data.error.msg || JSON.stringify(data.error))) || JSON.stringify(data);
