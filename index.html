@@ -251,7 +251,11 @@ function fatal(msg){
   el.textContent = '⚠️ 页面内部错误：' + msg;
   el.style.display = 'block';
 }
-window.addEventListener('error', e => fatal(e.message + '（第 ' + e.lineno + ' 行）'));
+window.addEventListener('error', e => {
+  if (!(e instanceof ErrorEvent)) return;
+  if (!e.message || e.filename !== location.href) return;
+  fatal(e.message + '（第 ' + e.lineno + ' 行）');
+});
 window.addEventListener('unhandledrejection', e => fatal(String(e.reason)));
 
 let toastTimer;
