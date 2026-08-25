@@ -133,6 +133,7 @@ textarea{min-height:96px;resize:vertical}
         <div class="drop" id="drop">点击选择图片</div>
         <input type="file" id="file" accept="image/*" multiple class="hidden">
         <div class="thumbs" id="thumbs"></div>
+        <div class="tip">💡 gpt-image-2 图生图通道仅支持 model / prompt / size / image / quality（image 支持多图）；工具会自动按接口支持的字段请求，失败时自动降级重试。</div>
       </div>
     </div>
 
@@ -556,26 +557,39 @@ async function readJson(res){
     throw new Error('HTTP ' + res.status + '，响应不是 JSON（上游可能报错）：\n' + t.slice(0, 300));
   }
   if (!res.ok || data.error){
-    const m = (data.error && (data.error.message || data.error.msg || JSON.stringify(data.error))) || JSON.stringify(data);
-    throw new Error(m);
+    const e = data.error || {};
+    const parts = [];
+    if (typeof e.message === 'string' && e.message) parts.push(e.message);
+    else if (typeof e.msg === 'string' && e.msg) parts.push(e.msg);
+    if (e.param) parts.push('param: ' + e.param);
+    if (e.code) parts.push('code: ' + e.code);
+    if (e.type) parts.push('type: ' + e.type);
+    if (!parts.length) parts.push(JSON.stringify(data.error || data));
+    const reqId = data.request_id || e.request_id;
+    if (reqId) parts.push('request_id: ' + reqId);
+    parts.push('HTTP ' + res.status);
+    throw new Error(parts.join('\n'));
   }
   if (!data.data || !data.data[0]) throw new Error('响应中没有图片数据：' + JSON.stringify(data).slice(0, 300));
   return data;
 }
 
-function postEdit(fieldName, baseUrl, apiKey, model, prompt, sizeVal){
+// 备用：multipart 方式提交 edits（A6API 的 gpt-image-2 渠道已确认不收 multipart，
+// 本函数保留给其他 OpenAI 兼容网关使用）
+async function doEdit(baseUrl, apiKey, opts){
   const fd = new FormData();
-  fd.append('model', model);
-  fd.append('prompt', prompt);
-  if (sizeVal) fd.append('size', sizeVal);
-  fd.append('quality', $('quality').value);
-  fd.append('n', '1');
-  refImages.forEach(r => fd.append(fieldName, r.file, r.file.name || 'ref.png'));
-  return fetch(baseUrl + '/images/edits', {
+  fd.append('model', opts.model);
+  fd.append('prompt', opts.prompt);
+  if (opts.sizeVal) fd.append('size', opts.sizeVal);
+  if (opts.quality) fd.append('quality', opts.quality);
+  const imgs = opts.many ? refImages : refImages.slice(0, 1);
+  imgs.forEach(r => fd.append(opts.field || 'image', r.file, r.file.name || 'ref.png'));
+  const res = await fetch(baseUrl + '/images/edits', {
     method: 'POST',
     headers: {'Authorization': 'Bearer ' + apiKey},
     body: fd
   });
+  return readJson(res);
 }
 
 async function gen(){
@@ -603,26 +617,116 @@ async function gen(){
     let data;
 
     if (mode === 'gen'){
-      const body = {model, prompt, n:1, quality:$('quality').value};
-      if (sizeVal) body.size = sizeVal;
-      const res = await fetch(baseUrl + '/images/generations', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey},
-        body: JSON.stringify(body)
-      });
-      data = await readJson(res);
-    } else {
-      let res = await postEdit('image', baseUrl, apiKey, model, prompt, sizeVal);
-      let firstErr = null;
-      try{ data = await readJson(res); }catch(e){ firstErr = e; data = null; }
-      if (!data){
-        if (/image/i.test(String(firstErr.message))){
-          res = await postEdit('image[]', baseUrl, apiKey, model, prompt, sizeVal);
+      // 文生图：gpt-image-2 的 generations 仅支持 model/prompt/size/image/quality（不支持 n），
+      // 按“由全到简”自动降级，避免不支持的字段导致 400
+      const q = $('quality').value;
+      const useQ = q && q !== 'auto';
+      const plans = [];
+      plans.push({size: sizeVal, quality: useQ ? q : null});
+      if (useQ) plans.push({size: sizeVal, quality: null});
+      if (sizeVal) plans.push({size: null, quality: null});
+      const paramErr = /(字段|参数|quality|size|格式|json|body)/i;
+      const fatalErr = /(401|402|404|429|余额|额度|限流|令牌|not found|model_not_found|forbidden|auth)/i;
+      let lastErr = null;
+      const logs = [];
+      for (const p of plans){
+        const desc = '尝试' + (logs.length + 1) + ': model+prompt' + (p.quality ? '+quality' : '') + (p.size ? '+size(' + p.size + ')' : '');
+        const body = {model, prompt};
+        if (p.size) body.size = p.size;
+        if (p.quality) body.quality = p.quality;
+        const res = await fetch(baseUrl + '/images/generations', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey},
+          body: JSON.stringify(body)
+        });
+        try{
           data = await readJson(res);
-        } else {
-          throw firstErr;
+          break;
+        }catch(e){
+          lastErr = e;
+          logs.push(desc + ' → ' + String(e.message).split('\n').join(' | ').slice(0, 220));
+          // 致命错误（余额不足、模型不存在、限流、鉴权失败）直接抛出，重试无意义
+          if (fatalErr.test(String(e.message))) throw e;
+          // 参数类错误或上游不可用 → 继续尝试下一个方案
         }
       }
+      if (!data){
+        const err = lastErr ? new Error(lastErr.message) : new Error('文生图请求失败（多次重试均未成功）');
+        err.message += '\n\n—— 各次尝试诊断 ——\n' + logs.join('\n');
+        if (lastErr && /上游|不可用|upstream|unavailable|503|5\d\d/i.test(String(lastErr.message))){
+          err.message += '\n\n💡 说明：当前是 A6API 上游渠道暂时不可用（与参数无关）：\n1) 稍等 1~2 分钟重试；\n2) 在 A6API 控制台对当前模型开启「智能优选」或切换固定商家；\n3) 换一个模型试试（如 gpt-image-1）。';
+        }
+        throw err;
+      }
+    } else {
+      // 图生图：A6API 对 multipart 的 edits 请求体校验严格（疑似仅接受 JSON），
+      // 优先用 JSON 请求体 + base64 传参考图，multipart 作为兜底
+      const q = $('quality').value;
+      const useQ = q && q !== 'auto';
+      const toDataURL = file => new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = () => rej(new Error('读取图片失败'));
+        r.readAsDataURL(file);
+      });
+      const imgs = refImages.length > 1 ? refImages : refImages.slice(0, 1);
+      const dataURLs = await Promise.all(imgs.map(r => toDataURL(r.file)));
+
+      const paramErr = /(字段|参数|quality|size|image|格式|json|body|multipart|file)/i;
+      const fatalErr = /(401|402|404|429|余额|额度|限流|令牌|not found|model_not_found|forbidden|auth)/i;
+      const logs = [];
+      const attempts = [];
+      // 1) JSON edits：image 为数组（base64 data URL）
+      attempts.push({
+        name: 'JSON /images/edits (image数组)',
+        run: () => fetch(baseUrl + '/images/edits', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey},
+          body: JSON.stringify({model, prompt, image: dataURLs, ...(sizeVal ? {size: sizeVal} : {}), ...(useQ ? {quality: q} : {})})
+        })
+      });
+      // 2) JSON edits：image 为单值
+      attempts.push({
+        name: 'JSON /images/edits (image单值)',
+        run: () => fetch(baseUrl + '/images/edits', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey},
+          body: JSON.stringify({model, prompt, image: dataURLs[0]})
+        })
+      });
+      // 3) JSON generations：image 数组（gpt-image-2 generations 官方支持 image 输入做参考图）
+      attempts.push({
+        name: 'JSON /images/generations (image数组)',
+        run: () => fetch(baseUrl + '/images/generations', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey},
+          body: JSON.stringify({model, prompt, image: dataURLs, ...(sizeVal ? {size: sizeVal} : {}), ...(useQ ? {quality: q} : {})})
+        })
+      });
+      // multipart edits 已确认不被 A6API 接受，不再尝试（doEdit 保留备用）
+
+      let lastErr = null;
+      for (const a of attempts){
+        try{
+          data = await readJson(await a.run());
+          break;
+        }catch(e){
+          lastErr = e;
+          logs.push(a.name + ' → ' + String(e.message).split('\n').join(' | ').slice(0, 220));
+          // 致命错误（余额不足、模型不存在、限流、鉴权失败）直接抛出，重试无意义
+          if (fatalErr.test(String(e.message))) throw e;
+          // 参数类错误或上游不可用 → 继续尝试下一个方案
+        }
+      }
+      if (!data){
+        const err = lastErr ? new Error(lastErr.message) : new Error('图生图请求失败（多次重试均未成功）');
+        err.message += '\n\n—— 各次尝试诊断 ——\n' + logs.join('\n');
+        if (lastErr && /上游|不可用|upstream|unavailable|503|5\d\d/i.test(String(lastErr.message))){
+          err.message += '\n\n💡 说明：JSON 参数已被网关接受（格式正确），当前是 A6API 上游渠道暂时不可用：\n1) 稍等 1~2 分钟重试；\n2) 在 A6API 控制台对当前模型开启「智能优选」或切换固定商家；\n3) 换一个模型试试（如 gpt-image-1）。';
+        }
+        throw err;
+      }
+      if (logs.length > 0) toast('已自动改用兼容格式请求成功');
     }
 
     const item = data.data[0];
