@@ -98,7 +98,10 @@
     </div>
 
     <div class="card">
-      <label>提示词（电脑端 Ctrl+Enter 快速生成）</label>
+      <div class="prompt-head">
+        <label>提示词（电脑端 Ctrl+Enter 快速生成）</label>
+        <button class="btn small ghost" id="zoomPrompt" title="放大编辑提示词"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg><span>放大</span></button>
+      </div>
       <textarea id="prompt" placeholder="文生图：描述你想要的画面&#10;图生图：说明如何使用参考图，例如：把第一张图的人物放进第二张图的场景"></textarea>
       <div class="err" id="err"></div>
       <div id="goBar">
@@ -107,8 +110,11 @@
     </div>
   </section>
 
-  <section class="col-right">
+  <section class="col-mid">
     <div id="taskList" class="task-list"></div>
+  </section>
+
+  <section class="col-right">
     <div class="card empty" id="emptyState">
       <div class="empty-icon">🖼️</div>
       <div>生成的图片会显示在这里</div>
@@ -150,6 +156,15 @@
     <button id="viewerClose">✕ 关闭</button>
   </div>
   <div class="viewer-tip">🖱 滚轮缩放，按住图片拖动查看细节，双击复位；也可以直接长按图片，选择「保存到相册 / 存储图像」</div>
+</div>
+
+<div id="promptEditor">
+  <textarea id="peText" placeholder="在这里放大编辑提示词…"></textarea>
+  <div class="pe-bar">
+    <button id="peConfirm">✅ 完成</button>
+    <button id="peCancel">✕ 取消</button>
+  </div>
+  <div class="viewer-tip">Ctrl+Enter 完成 · Esc / 点击空白处取消</div>
 </div>
 
 <div id="toast"></div>

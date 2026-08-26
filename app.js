@@ -144,8 +144,17 @@ function createTaskCard(task){
   const head = makeEl('div', 'task-head');
   const badge = makeEl('span', 'task-badge', task.mode === 'gen' ? '文生图' : '图生图');
   const title = makeEl('div', 'task-title', '任务 #' + task.id + ' · ' + task.sizeLabel);
+  const chip = makeEl('span', 'task-chip', '⏳');
+  const thumb = makeEl('div', 'task-thumb');
+  const thumbImg = makeEl('img');
+  thumbImg.alt = '';
+  thumb.appendChild(thumbImg);
+  const toggle = makeEl('span', 'task-toggle');
   head.appendChild(badge);
   head.appendChild(title);
+  head.appendChild(chip);
+  head.appendChild(thumb);
+  head.appendChild(toggle);
   const promptEl = makeEl('div', 'task-prompt', task.prompt);
   const status = makeEl('div', 'task-status');
   status.appendChild(makeEl('span', 'spinner'));
@@ -193,12 +202,18 @@ function createTaskCard(task){
     toast('已把任务 #' + task.id + ' 的配置恢复到左侧');
     $('prompt').focus();
   };
+  document.querySelectorAll('.task-card').forEach(c => {
+    if (c.querySelector('.task-status.done, .task-status.fail') && !c.classList.contains('collapsed')) c.classList.add('collapsed');
+  });
+  head.addEventListener('click', () => card.classList.toggle('collapsed'));
+  thumbImg.onclick = e => { e.stopPropagation(); if (task.src){ showMainResult(task.src, task.sizeVal); openViewer(task.src); } };
   $('taskList').insertBefore(card, $('taskList').firstChild);
-  task.el = {card: card, status: status, statusText: statusText, error: errorEl, failActions: failActions, result: result};
+  task.el = {card: card, status: status, statusText: statusText, error: errorEl, failActions: failActions, result: result, chip: chip, thumb: thumbImg};
 }
 function setTaskStatus(task, text){
   task.statusBase = text;
   task.el.statusText.textContent = text + '…（已等待 ' + task.secs + ' 秒，生图通常要 10~60 秒）';
+  task.el.chip.textContent = '⏳ 生成中';
 }
 function startTaskTimer(task, text){
   clearInterval(task.timer);
@@ -213,13 +228,17 @@ function finishTask(task){
   clearInterval(task.timer);
   task.timer = null;
   task.el.status.classList.add('done');
+  task.el.card.classList.add('done');
   task.el.statusText.textContent = '✅ 已完成，用时 ' + task.secs + ' 秒';
+  task.el.chip.textContent = '✅ 完成';
 }
 function failTask(task, msg){
   clearInterval(task.timer);
   task.timer = null;
   task.el.status.classList.add('fail');
+  task.el.card.classList.add('fail');
   task.el.statusText.textContent = '❌ 生成失败';
+  task.el.chip.textContent = '❌ 失败';
   task.el.error.textContent = msg;
   task.el.error.classList.remove('hidden');
   task.el.failActions.classList.remove('hidden');
@@ -729,6 +748,8 @@ async function runTask(task){
     finishTask(task);
     task.el.result.classList.remove('hidden');
     task.el.result.querySelector('img').src = src;
+    task.el.thumb.src = src;
+    task.el.card.classList.add('has-result');
     showMainResult(src, sizeVal);
     history.unshift(src);
     renderHistory();
@@ -750,6 +771,32 @@ $('go').onclick = startTask;
 
 $('prompt').addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') startTask();
+});
+
+/* ================= 提示词放大编辑 ================= */
+const peBox = $('promptEditor');
+const peText = $('peText');
+function openPromptEditor(){
+  peText.value = $('prompt').value;
+  peBox.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  peText.focus();
+  const n = peText.value.length;
+  try{ peText.setSelectionRange(n, n); peText.scrollTop = peText.scrollHeight; }catch(e){}
+}
+function closePromptEditor(save){
+  if (save) $('prompt').value = peText.value;
+  peBox.style.display = 'none';
+  document.body.style.overflow = '';
+  $('prompt').focus();
+}
+$('zoomPrompt').onclick = openPromptEditor;
+$('peConfirm').onclick = () => closePromptEditor(true);
+$('peCancel').onclick = () => closePromptEditor(false);
+peBox.addEventListener('click', e => { if (e.target === peBox) closePromptEditor(false); });
+peText.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); closePromptEditor(true); }
+  else if (e.key === 'Escape'){ e.preventDefault(); closePromptEditor(false); }
 });
 
 function showErr(msg){ $('err').textContent = msg || ''; }

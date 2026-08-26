@@ -15,7 +15,7 @@ body{font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaH
 .logo{font-size:17px;font-weight:700;letter-spacing:.3px}
 .topbar-actions{display:flex;gap:8px}
 .iconbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:17px;cursor:pointer;touch-action:manipulation}
-.layout{max-width:1200px;margin:0 auto;padding:14px 14px 0}
+.layout{max-width:1500px;margin:0 auto;padding:14px 14px 0}
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
 label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
 input,select,textarea{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:16px;outline:none;transition:border-color .2s}
@@ -51,7 +51,7 @@ textarea{min-height:96px;resize:vertical}
 @keyframes spin{to{transform:rotate(360deg)}}
 .result img{max-width:100%;border-radius:12px;display:block;cursor:pointer;touch-action:manipulation}
 .err{color:var(--danger);font-size:14px;margin-top:10px;white-space:pre-wrap}
-#fatal{display:none;max-width:1200px;margin:10px auto 0;background:#3d1518;border:1px solid var(--danger);color:#ffb4b6;padding:12px;border-radius:12px;font-size:14px;white-space:pre-wrap}
+#fatal{display:none;max-width:1500px;margin:10px auto 0;background:#3d1518;border:1px solid var(--danger);color:#ffb4b6;padding:12px;border-radius:12px;font-size:14px;white-space:pre-wrap}
 .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
 .task-list{display:flex;flex-direction:column;gap:14px}
 .task-list .task-card{margin-bottom:0}
@@ -92,8 +92,45 @@ textarea{min-height:96px;resize:vertical}
 #toast.on{opacity:1}
 @media (min-width:960px){
   body{padding-bottom:32px}
-  .layout{display:grid;grid-template-columns:minmax(380px,460px) minmax(0,1fr);gap:18px;align-items:start;padding-top:20px}
+  .layout{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start;padding-top:20px}
   #goBar{position:static;padding:0;background:none;border:none;backdrop-filter:none;-webkit-backdrop-filter:none;margin-top:14px}
   .logo{font-size:19px}
   .empty{padding:110px 20px}
+  .col-left{display:flex;flex-direction:column;min-height:calc(100vh - 110px)}
+  .col-left > .card:last-child{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+  #prompt{flex:1 1 auto;min-height:160px}
 }
+
+/* 提示词放大编辑 */
+.prompt-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 6px}
+.prompt-head label{margin:0}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 12px}
+.btn.ghost:hover{color:var(--text);border-color:var(--accent)}
+#zoomPrompt{display:inline-flex;align-items:center;gap:6px;line-height:1}
+#zoomPrompt svg{flex:none}
+#promptEditor{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:998;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+#peText{width:min(900px,92vw);height:min(70vh,640px);font-size:16px;line-height:1.7;padding:18px;border-radius:14px;resize:none;background:var(--card);box-shadow:var(--shadow)}
+.pe-bar{display:flex;gap:12px;margin-top:16px;justify-content:center;width:min(900px,92vw)}
+.pe-bar button{flex:1 1 0;max-width:240px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:15px;cursor:pointer;touch-action:manipulation}
+#peCancel{background:#3a3f4a}
+
+/* 任务卡片折叠 */
+.task-head{cursor:pointer}
+.task-title{flex:1;min-width:0}
+.task-chip{flex:none;font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:3px 8px;display:none;white-space:nowrap}
+.task-thumb{flex:none;display:none}
+.task-thumb img{width:38px;height:38px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+.task-toggle{flex:none;color:var(--muted);font-size:14px;width:14px;text-align:center}
+.task-card .task-toggle::after{content:'▾'}
+.task-card.collapsed{padding:8px 12px}
+.task-card.collapsed .task-head{margin-bottom:0}
+.task-card.collapsed .task-prompt,
+.task-card.collapsed .task-status,
+.task-card.collapsed .task-error,
+.task-card.collapsed .task-actions,
+.task-card.collapsed .task-result{display:none}
+.task-card.collapsed .task-chip{display:inline-block}
+.task-card.collapsed .task-toggle::after{content:'▸'}
+.task-card.collapsed.has-result .task-thumb{display:block}
+.task-card.done .task-chip{color:var(--accent);border-color:var(--accent)}
+.task-card.fail .task-chip{color:var(--danger);border-color:var(--danger)}
