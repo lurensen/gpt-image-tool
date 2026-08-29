@@ -1,0 +1,11 @@
+# 工作区记忆目录（含个人笔记与项目记录，不入库）
+.workbuddy/
+
+# 本地服务器运行日志
+server-crash.log
+
+# 依赖与系统文件
+node_modules/
+.DS_Store
+Thumbs.db
+*.local

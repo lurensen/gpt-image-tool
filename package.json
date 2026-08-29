@@ -1,0 +1,9 @@
+{
+  "name": "gpt-image-tool",
+  "private": true,
+  "type": "module",
+  "description": "纯前端生图工具 + server.js 本地代理（SenseNova CORS 中转）。一键使用：双击 一键启动.bat",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
