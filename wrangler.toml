@@ -1,0 +1,15 @@
+# Cloudflare Workers 部署配置（Workers Builds 的 Deploy command 会执行 npx wrangler deploy）
+# 页面（静态资源）与商汤中转（/v1/*）在同一个 Worker 里：一次部署，前后端同源。
+#
+# 发布采用白名单：构建时只把 4 个前端文件复制进 dist/（见 Deploy command），
+# 其余文件（server.js、functions/、脚本、笔记等）物理上不会出现在线上。
+
+name = "gpt-image-tool"
+main = "worker.js"
+compatibility_date = "2026-08-29"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+# 单页工具：未命中的路径回退到 index.html
+not_found_handling = "single-page-application"

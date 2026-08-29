@@ -12,3 +12,8 @@ Thumbs.db
 
 # 本机启动脚本：仅本地使用，不入库（用 git rm --cached 移除跟踪后本地文件仍在）
 *.bat
+
+# Cloudflare 构建产物（由 Deploy command 生成，不入库）
+dist/
+.wrangler/
+tmp/
