@@ -9,3 +9,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.local
+
+# 本机启动脚本：仅本地使用，不入库（用 git rm --cached 移除跟踪后本地文件仍在）
+*.bat
