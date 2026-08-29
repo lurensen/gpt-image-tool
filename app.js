@@ -28,8 +28,13 @@ function toast(msg){
 }
 
 /* ================= 主题 ================= */
+// 用变量记录当前主题，不依赖读回 DOM（避免个别手机浏览器上取值异常）
+let currentTheme = 'dark';
 function applyTheme(t){
+  currentTheme = t;
   document.documentElement.dataset.theme = t;
+  // 同步 color-scheme，让原生控件（下拉框、滚动条、日期选择）也跟着换肤
+  document.documentElement.style.colorScheme = t;
   // 图标（日/月）由 CSS 按 data-theme 控制显示，这里只同步无障碍标签
   $('themeBtn').title = t === 'dark' ? '切换到浅色模式' : '切换到深色模式';
   $('themeBtn').setAttribute('aria-label', $('themeBtn').title);
@@ -37,7 +42,12 @@ function applyTheme(t){
   if (meta) meta.content = t === 'dark' ? '#09090B' : '#FAFAFA';
   store.set('gptimg_theme', t);
 }
-$('themeBtn').onclick = () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+$('themeBtn').onclick = () => {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  // 明确反馈：若提示出现但画面没变，说明是浏览器「强制深色网页」在覆盖，而非页面代码问题
+  toast('已切换到' + (currentTheme === 'dark' ? '夜间' : '日间') + '模式'
+    + '（data-theme=' + currentTheme + '）');
+};
 applyTheme(store.get('gptimg_theme') || ((window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark'));
 
 /* ================= 配置存储（按 provider 独立保存） =================

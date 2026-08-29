@@ -859,6 +859,9 @@ textarea{min-height:96px;resize:vertical;line-height:1.65}
 @media (max-width:520px){
   .pe-tools{gap:6px}
   .pe-tools button,.pe-tools select{padding:10px 12px;font-size:14px}
+  /* 手机上顶栏按钮 34px 偏小，容易点空，放大到 40px */
+  .iconbtn{width:40px;height:40px}
+  .iconbtn svg{width:18px;height:18px}
 }
 
 /* ---------- Provider 开关 ---------- */
@@ -901,7 +904,8 @@ textarea{min-height:96px;resize:vertical;line-height:1.65}
   content:'';position:absolute;
   height:16px;width:16px;left:3px;bottom:3px;
   background:#fff;border-radius:50%;
-  box-shadow:0 1px 3px rgba(0,0,0,.4);
+  /* 描边不能省：浅色主题下轨道是浅灰，纯白圆点会完全糊掉看不出是开关 */
+  box-shadow:0 0 0 1px rgba(0,0,0,.14), 0 1px 3px rgba(0,0,0,.28);
   transition:transform .22s var(--ease);
 }
 .switch input:checked + .slider{background:var(--accent)}
